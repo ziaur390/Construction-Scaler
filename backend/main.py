@@ -17,8 +17,11 @@ from database import engine, get_db
 import models
 from pdf_service import PDFService
 
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
+# Create database tables (safe — won't crash if DB is not yet configured)
+try:
+    models.Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"[WARNING] Could not create DB tables: {e}")
 
 # ── Session Store ────────────────────────────────────────────────
 
