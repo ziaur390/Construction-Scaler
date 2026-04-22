@@ -135,7 +135,10 @@ class PDFService:
         mat = page.rotation_matrix * fitz.Matrix(zoom, zoom)
         pix = page.get_pixmap(matrix=mat, alpha=False)
 
-        img_bytes = pix.tobytes("jpeg", jpeg_quality=85)
+        try:
+            img_bytes = pix.tobytes("jpeg", jpg_quality=85)
+        except TypeError:
+            img_bytes = pix.tobytes("jpeg", jpeg_quality=85)
         img_b64 = base64.b64encode(img_bytes).decode("ascii")
 
         scales = _detect_scales(page)
