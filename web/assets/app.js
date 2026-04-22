@@ -12,7 +12,7 @@
   const API_BASE =
     window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
       ? "http://127.0.0.1:8000"
-      : "https://construction-scaler-api.onrender.com"; // ← Replace with your actual Render URL
+      : "https://construction-scaler.onrender.com";
 
   // ── DOM Elements ───────────────────────────────────────────────
   const canvas = document.getElementById("measureCanvas");
