@@ -1,0 +1,6 @@
+# No third-party Python packages are required for the local web server.
+
+#The legacy desktop prototype may need:
+pymupdf
+matplotlib
+numpy

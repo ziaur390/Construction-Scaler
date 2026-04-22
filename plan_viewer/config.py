@@ -1,0 +1,3 @@
+BASE_DPI = 200
+REAL_UNITS = "ft"
+SHOW_SCALE_BOXES = False

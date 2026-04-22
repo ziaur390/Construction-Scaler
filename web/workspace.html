@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Precision Workspace | Construction Scaler</title>
+  <meta name="description" content="Measure distances and areas on construction blueprints with automatic scale detection.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+  <header class="topbar" id="mainHeader">
+    <a class="brand" href="./index.html">
+      <span class="brand-mark">CS</span>
+      <span class="brand-copy">
+        <strong>Construction Scaler</strong>
+        <small>Precision Intelligence</small>
+      </span>
+    </a>
+    <nav class="nav">
+      <a href="./index.html">Dashboard</a>
+      <a href="./index.html#solutions">Solutions</a>
+      <div style="display:flex;align-items:center;gap:16px;margin-left:12px;border-left:1px solid var(--nav-border);padding-left:24px;">
+        <span class="nav-cta" style="padding:8px 16px;font-size:0.85rem;">Workspace Active</span>
+      </div>
+    </nav>
+  </header>
+
+  <main class="tool-layout">
+    <!-- Toolbar -->
+    <section class="workspace-toolbar" id="toolbar">
+      <div class="toolbar-group">
+        <button class="button button-primary" id="btnImport" type="button" style="padding:10px 20px;">+ Import PDF</button>
+        <input id="pdfInput" type="file" accept=".pdf" style="display:none;">
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="toolbar-group control-stack-horizontal">
+        <button class="control-pill active" id="btnDistance" type="button">Distance</button>
+        <button class="control-pill" id="btnArea" type="button">Area</button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="toolbar-group">
+        <label for="scaleSelect" style="font-size:0.8rem;font-weight:700;text-transform:uppercase;opacity:0.6;">Scale:</label>
+        <select id="scaleSelect" class="scale-dropdown">
+          <option value="">No scales detected</option>
+        </select>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="toolbar-group page-controls">
+        <button class="page-btn" id="btnPrev" type="button" title="Previous page">◀</button>
+        <span id="pageInfo" style="font-size:0.85rem;font-weight:700;min-width:60px;text-align:center;">— / —</span>
+        <button class="page-btn" id="btnNext" type="button" title="Next page">▶</button>
+      </div>
+
+      <div class="toolbar-group" style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+        <span id="resultBadge" class="result-badge" style="display:none;"></span>
+        <button class="button button-secondary" id="btnClear" type="button" style="padding:8px 14px;font-size:0.85rem;">Clear</button>
+      </div>
+    </section>
+
+    <!-- Canvas Workspace -->
+    <section class="canvas-workspace" id="canvasWorkspace">
+      <canvas id="measureCanvas"></canvas>
+      <div class="canvas-empty-state" id="emptyState">
+        <div class="empty-card">
+          <div class="empty-icon">📐</div>
+          <strong>Import a Construction PDF</strong>
+          <p>Upload a blueprint to begin measuring distances and areas with automatic scale detection.</p>
+          <button class="button button-primary" id="btnImport2" type="button" style="margin-top:12px;">+ Import PDF</button>
+        </div>
+      </div>
+      <div class="canvas-loading" id="loadingOverlay" style="display:none;">
+        <div class="loading-spinner"></div>
+        <p>Processing PDF…</p>
+      </div>
+    </section>
+
+    <!-- Status Bar -->
+    <section class="status-bar" id="statusBar">
+      <div class="status-bar-left">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText" style="font-size:0.8rem;">Ready</span>
+      </div>
+      <div class="status-bar-right">
+        <span id="cursorInfo" style="font-size:0.8rem;opacity:0.6;"></span>
+        <span id="zoomInfo" style="font-size:0.8rem;font-weight:700;">100%</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="./assets/app.js"></script>
+</body>
+</html>

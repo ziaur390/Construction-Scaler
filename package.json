@@ -1,0 +1,16 @@
+{
+  "name": "construction-scaler",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local web MVP for construction drawing PDF review.",
+  "scripts": {
+    "start": "python server.py"
+  },
+  "keywords": [
+    "construction",
+    "pdf",
+    "takeoff",
+    "measurement",
+    "mvp"
+  ]
+}

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Precision Workspace | Construction Scaler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+    <header class="topbar" id="mainHeader">
+      <a class="brand" href="./index.html">
+        <span class="brand-mark">CS</span>
+        <span class="brand-copy">
+          <strong>Construction Scaler</strong>
+          <small>Precision Intelligence</small>
+        </span>
+      </a>
+
+      <nav class="nav">
+        <a href="./index.html">Dashboard</a>
+        <a href="./index.html#solutions">Solutions</a>
+        <a href="./index.html#analytics">Analytics</a>
+        <div style="display: flex; align-items: center; gap: 16px; margin-left: 12px; border-left: 1px solid var(--nav-border); padding-left: 24px;">
+          <span class="nav-cta">Enterprise Access</span>
+          <div style="width: 38px; height: 38px; border-radius: 50%; background: #e2e8f0; border: 2px solid white; box-shadow: var(--nav-shadow); overflow: hidden;">
+            <img src="https://ui-avatars.com/api/?name=User&background=0f172a&color=fff" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="tool-layout">
+      <!-- Consolidated Horizontal Toolbar -->
+      <section class="workspace-toolbar">
+        <div class="toolbar-group">
+          <button class="button button-primary" id="openPdfButton" type="button" style="padding: 10px 20px;">+ Import Blueprint</button>
+          <input id="pdfInput" type="file" accept=".pdf" style="display: none;">
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="toolbar-group control-stack-horizontal">
+          <button class="control-pill active" data-mode="Linear Measurement" type="button">Linear Precision</button>
+          <button class="control-pill" data-mode="Area Analysis" type="button">Area Intelligence</button>
+          <button class="control-pill" data-mode="Auto Calibration" type="button">Scale Detection</button>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="toolbar-group status-info">
+          <div class="status-badge">
+            <span class="status-dot" id="statusIndicator"></span>
+            <span id="detectionStatus" style="font-size: 0.8rem; font-weight: 600;">Awaiting Input...</span>
+          </div>
+          <div class="tool-meta">
+            <span id="selectedMode" style="font-size: 0.75rem; opacity: 0.7; font-weight: 700; text-transform: uppercase;">Review Mode</span>
+            <span id="activeFile" style="font-size: 0.75rem; font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">None</span>
+          </div>
+        </div>
+
+        <div class="toolbar-group" style="margin-left: auto; display: flex; gap: 12px; align-items: center;">
+          <div id="activityLog" style="display: none;"></div> <!-- Hidden but ID maintained -->
+          <button class="button button-secondary" id="clearWorkspaceButton" type="button" style="padding: 10px 16px;">Reset</button>
+          <button class="button button-primary" style="padding: 10px 16px;">Export Report</button>
+        </div>
+      </section>
+
+      <section class="tool-grid single-pane">
+        <section class="panel viewer-stage">
+          <div class="canvas-placeholder" id="dropZone">
+            <div class="canvas-grid" id="canvasGrid"></div>
+            <div class="scanning-beam"></div>
+            <iframe id="pdfFrame" class="pdf-frame" title="Blueprint Viewer"></iframe>
+            <div class="canvas-message" id="canvasMessage">
+              <strong>Awaiting Document Import</strong>
+              <p style="margin-top: 8px; font-size: 0.9rem;">Drag & Drop a construction blueprint here or use the Import button.</p>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div>
+        <strong>Construction Scaler</strong>
+        <p style="color: var(--nav-muted); font-size: 0.9rem;">The Professional Standard in Blueprint Intelligence.</p>
+      </div>
+      <div class="footer-links">
+        <a href="./index.html">Terms</a>
+        <a href="./index.html">Privacy</a>
+        <a href="./index.html">Support</a>
+      </div>
+    </footer>
+  </div>
+  <script src="./assets/app.js"></script>
+</body>
+</html>

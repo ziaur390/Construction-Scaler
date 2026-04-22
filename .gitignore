@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+training_data.jsonl
+.DS_Store
+Thumbs.db
+venv/
+.venv/
+.env
+*.db
+node_modules/
