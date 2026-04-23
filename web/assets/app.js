@@ -421,6 +421,12 @@
         });
         if (firstOK >= 0) scaleSelect.value = firstOK;
       }
+      
+      // Always add the custom scale option at the end
+      const customOpt = document.createElement("option");
+      customOpt.value = "custom";
+      customOpt.textContent = "+ Add Custom Scale...";
+      scaleSelect.appendChild(customOpt);
 
       // Load image
       const img = new Image();
@@ -807,6 +813,48 @@
   });
 
   if (btnClear) btnClear.addEventListener("click", clearMeasurements);
+
+  if (scaleSelect) {
+    scaleSelect.addEventListener("change", () => {
+      if (scaleSelect.value === "custom") {
+        const input = prompt("Enter a custom scale multiplier.\n\nExamples:\nFor 1/8\" = 1'0\", enter 96 (since 1 foot / 0.125 inch = 96)\nFor 1/4\" = 1'0\", enter 48\nFor 1:100, enter 100");
+        const multiplier = parseFloat(input);
+        if (!isNaN(multiplier) && multiplier > 0) {
+          const raw = `Custom 1:${multiplier}`;
+          const newScale = {
+            kind: "OK",
+            ratio: 1 / multiplier,
+            raw: raw,
+            label: raw
+          };
+          scales.push(newScale);
+          
+          // Remove custom option temporarily
+          const lastOpt = scaleSelect.lastElementChild;
+          if (lastOpt && lastOpt.value === "custom") {
+            scaleSelect.removeChild(lastOpt);
+          }
+          
+          // Add new scale
+          const opt = document.createElement("option");
+          opt.value = scales.length - 1;
+          opt.textContent = newScale.label;
+          scaleSelect.appendChild(opt);
+          
+          // Put custom option back
+          if (lastOpt && lastOpt.value === "custom") {
+            scaleSelect.appendChild(lastOpt);
+          }
+          
+          scaleSelect.value = scales.length - 1;
+        } else {
+          if (input !== null) alert("Invalid multiplier. Please enter a valid number (e.g. 96).");
+          // Revert selection
+          scaleSelect.value = scales.length > 0 ? 0 : "";
+        }
+      }
+    });
+  }
 
   // Keyboard shortcuts
   document.addEventListener("keydown", (e) => {
