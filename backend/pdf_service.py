@@ -11,8 +11,6 @@ from typing import List
 
 import fitz  # PyMuPDF
 import io
-import pytesseract
-from PIL import Image
 
 BASE_DPI = 150  # Lower than desktop (200) for faster web transfer
 
@@ -122,6 +120,8 @@ def _detect_scales(page: fitz.Page) -> List[dict]:
     if not scales:
         print("[OCR] No scales found in text layer, falling back to OCR...")
         try:
+            import pytesseract
+            from PIL import Image
             # Render page at 200 DPI for OCR
             pix = page.get_pixmap(matrix=fitz.Matrix(200/72.0, 200/72.0), alpha=False)
             img = Image.open(io.BytesIO(pix.tobytes("png")))
