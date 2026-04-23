@@ -50,6 +50,7 @@
   const summaryPanel = document.getElementById("summaryPanel");
   const btnCloseSummary = document.getElementById("btnCloseSummary");
   const summaryContent = document.getElementById("summaryContent");
+  const btnExportCSV = document.getElementById("btnExportCSV");
 
   const labelPopup = document.getElementById("labelPopup");
   const labelBtns = document.querySelectorAll(".label-btn");
@@ -583,6 +584,45 @@
   if (btnCloseSummary) {
     btnCloseSummary.addEventListener("click", () => {
       summaryPanel.style.display = "none";
+    });
+  }
+
+  if (btnExportCSV) {
+    btnExportCSV.addEventListener("click", async () => {
+      if (!currentFilename) return;
+      try {
+        btnExportCSV.textContent = "Exporting...";
+        const res = await fetch(`${API_BASE}/api/measurements/${currentFilename}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          let csvContent = "data:text/csv;charset=utf-8,";
+          csvContent += "ID,Page,Type,Result,Scale,Category,Date\n";
+          
+          data.forEach(m => {
+            const date = new Date(m.timestamp).toLocaleString();
+            const cat = m.category_label || "Uncategorized";
+            const result = m.result_text.replace(/"/g, '""'); // Escape quotes
+            const scale = m.scale_label.replace(/"/g, '""');
+            const row = `${m.id},${m.page_num},${m.type},"${result}","${scale}","${cat}","${date}"`;
+            csvContent += row + "\n";
+          });
+          
+          const encodedUri = encodeURI(csvContent);
+          const link = document.createElement("a");
+          link.setAttribute("href", encodedUri);
+          link.setAttribute("download", `${currentFilename}_measurements.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } catch (err) {
+        console.error("Failed to export CSV:", err);
+      } finally {
+        btnExportCSV.textContent = "Export to CSV";
+      }
     });
   }
 
