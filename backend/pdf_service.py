@@ -118,14 +118,17 @@ def _detect_scales(page: fitz.Page) -> List[dict]:
                 })
     # Fallback to OCR if no scales found in text layer
     if not scales:
-        print("[OCR] No scales found in text layer, falling back to OCR...")
         try:
             import pytesseract
             from PIL import Image
-            # Render page at 200 DPI for OCR
-            pix = page.get_pixmap(matrix=fitz.Matrix(200/72.0, 200/72.0), alpha=False)
-            img = Image.open(io.BytesIO(pix.tobytes("png")))
+            # Quick check: is tesseract actually installed?
+            pytesseract.get_tesseract_version()
+            print("[OCR] No scales in text layer, running OCR fallback...")
+            # Only render the expensive pixmap if tesseract is confirmed available
+            pix_ocr = page.get_pixmap(matrix=fitz.Matrix(200/72.0, 200/72.0), alpha=False)
+            img = Image.open(io.BytesIO(pix_ocr.tobytes("png")))
             ocr_text = pytesseract.image_to_string(img)
+            del pix_ocr  # Free memory immediately
             
             for line in ocr_text.split('\n'):
                 if line.strip():
@@ -140,8 +143,8 @@ def _detect_scales(page: fitz.Page) -> List[dict]:
                                 "raw": raw or line.strip(),
                                 "label": f"{kind} (OCR): {raw}" if raw else f"{kind} (OCR)"
                             })
-        except Exception as e:
-            print(f"[OCR] Fallback failed: {e}")
+        except Exception:
+            pass  # OCR not available — skip silently
 
     return scales
 
