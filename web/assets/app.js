@@ -8,7 +8,6 @@
   "use strict";
 
   // ── Configuration ──────────────────────────────────────────────
-  // UPDATE THIS after deploying the backend to Render:
   const API_BASE =
     window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
       ? "http://127.0.0.1:8000"
@@ -42,7 +41,7 @@
   const summaryPanel = document.getElementById("summaryPanel");
   const btnCloseSummary = document.getElementById("btnCloseSummary");
   const summaryContent = document.getElementById("summaryContent");
-  
+
   const labelPopup = document.getElementById("labelPopup");
   const labelBtns = document.querySelectorAll(".label-btn");
   const btnSkipLabel = document.getElementById("btnSkipLabel");
@@ -53,7 +52,7 @@
   let pageCount = 0;
   let currentPage = 0;
   let pageDPI = 150;
-  let pageImage = null; // Image object
+  let pageImage = null;
   let scales = [];
 
   let mode = "distance"; // "distance" | "area"
@@ -62,17 +61,17 @@
   let zoom = 1;
   let panX = 0;
   let panY = 0;
-  let fitScale = 1; // scale to fit image in canvas
+  let fitScale = 1;
 
   // Measurement state
-  let distPoint1 = null; // {x, y} in image coords
-  let polyPoints = []; // [{x,y}, ...] in image coords
-  let mouseImg = null; // current mouse in image coords
-  
-  let pendingMeasurement = null; // Holds measurement before labeling
+  let distPoint1 = null;
+  let polyPoints = [];
+  let mouseImg = null;
+
+  let pendingMeasurement = null;
 
   // Completed measurements for overlay
-  let measurements = []; // [{type, points, text, scale}]
+  let measurements = [];
 
   // Pan drag state
   let isPanning = false;
@@ -164,7 +163,7 @@
     if (!pageImage) return;
     const sx = canvas.width / pageImage.width;
     const sy = canvas.height / pageImage.height;
-    fitScale = Math.min(sx, sy) * 0.95; // 95% to leave a small margin
+    fitScale = Math.min(sx, sy) * 0.95;
   }
 
   function fitView() {
@@ -180,7 +179,6 @@
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Background
     ctx.fillStyle = "#e8ecef";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -190,10 +188,8 @@
     ctx.translate(panX, panY);
     ctx.scale(fitScale * zoom, fitScale * zoom);
 
-    // Draw page image
     ctx.drawImage(pageImage, 0, 0);
 
-    // Draw completed measurements
     for (const m of measurements) {
       if (m.type === "distance") {
         drawDistanceLine(m.points[0], m.points[1], m.text);
@@ -202,7 +198,6 @@
       }
     }
 
-    // Draw in-progress measurement
     if (mode === "distance" && distPoint1) {
       drawPoint(distPoint1, "#3b82f6");
       if (mouseImg) {
@@ -211,7 +206,6 @@
     }
 
     if (mode === "area" && polyPoints.length > 0) {
-      // Draw partial polygon
       ctx.strokeStyle = "#8b5cf6";
       ctx.lineWidth = 2 / (fitScale * zoom);
       ctx.setLineDash([6 / (fitScale * zoom), 4 / (fitScale * zoom)]);
@@ -264,7 +258,6 @@
     drawPoint(a, "#3b82f6");
     drawPoint(b, "#3b82f6");
 
-    // Label
     if (label) {
       const mx = (a.x + b.x) / 2;
       const my = (a.y + b.y) / 2;
@@ -327,7 +320,19 @@
       const form = new FormData();
       form.append("file", file);
 
-      const res = await fetch(`${API_BASE}/api/upload`, { method: "POST", body: form });
+      // Retry upload up to 3 times (handles Render cold start)
+      let res;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          setStatus(attempt > 1 ? `Waking up server… attempt ${attempt}/3` : "Uploading…", false);
+          res = await fetch(`${API_BASE}/api/upload`, { method: "POST", body: form });
+          break;
+        } catch (fetchErr) {
+          if (attempt === 3) throw fetchErr;
+          await new Promise(r => setTimeout(r, 3000 * attempt));
+        }
+      }
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.detail || `Upload failed (${res.status})`);
@@ -354,7 +359,19 @@
     setStatus(`Rendering page ${num}…`, true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/page/${sessionId}/${num}`);
+      // Retry up to 3 times to handle Render free-tier cold start
+      let res;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          setStatus(attempt > 1 ? `Waking up server… attempt ${attempt}/3` : `Rendering page ${num}…`, true);
+          res = await fetch(`${API_BASE}/api/page/${sessionId}/${num}`);
+          break;
+        } catch (fetchErr) {
+          if (attempt === 3) throw fetchErr;
+          await new Promise(r => setTimeout(r, 3000 * attempt)); // wait 3s, then 6s
+        }
+      }
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.detail || `Load failed (${res.status})`);
@@ -436,7 +453,6 @@
       const res = await fetch(`${API_BASE}/api/measurements/${currentFilename}`);
       if (res.ok) {
         const data = await res.json();
-        // Filter by current page and map to internal format
         measurements = data
           .filter(m => m.page_num === pageNum)
           .map(m => ({
@@ -458,16 +474,14 @@
   function showLabelPopup(m, x, y) {
     pendingMeasurement = m;
     labelPopup.style.display = "block";
-    
-    // Position near the click
+
     const rect = canvas.getBoundingClientRect();
     let px = rect.left + x + 20;
     let py = rect.top + y - 20;
-    
-    // Keep in bounds
+
     if (px + 240 > window.innerWidth) px = window.innerWidth - 250;
     if (py + 200 > window.innerHeight) py = window.innerHeight - 210;
-    
+
     labelPopup.style.left = `${px}px`;
     labelPopup.style.top = `${py}px`;
   }
@@ -491,11 +505,14 @@
     });
   });
 
-  btnSkipLabel.addEventListener("click", () => {
-    finalizeMeasurement(null);
-  });
+  if (btnSkipLabel) {
+    btnSkipLabel.addEventListener("click", () => {
+      finalizeMeasurement(null);
+    });
+  }
 
   function renderSummary() {
+    if (!summaryContent) return;
     summaryContent.innerHTML = "";
     if (measurements.length === 0) {
       summaryContent.innerHTML = "<p style='opacity:0.6;font-size:0.85rem;text-align:center;margin-top:20px;'>No measurements yet.</p>";
@@ -512,7 +529,7 @@
     for (const [cat, items] of Object.entries(groups)) {
       const groupEl = document.createElement("div");
       groupEl.className = "summary-group";
-      
+
       const title = document.createElement("div");
       title.className = "summary-group-title";
       title.innerHTML = `<span>${cat}</span><span>${items.length} item(s)</span>`;
@@ -529,14 +546,20 @@
     }
   }
 
-  btnSummary.addEventListener("click", () => {
-    summaryPanel.style.display = summaryPanel.style.display === "none" ? "flex" : "none";
-    if (summaryPanel.style.display === "flex") renderSummary();
-  });
+  if (btnSummary) {
+    btnSummary.addEventListener("click", () => {
+      summaryPanel.style.display = summaryPanel.style.display === "none" ? "flex" : "none";
+      if (summaryPanel.style.display === "flex") renderSummary();
+    });
+  }
 
-  btnCloseSummary.addEventListener("click", () => {
-    summaryPanel.style.display = "none";
-  });
+  if (btnCloseSummary) {
+    btnCloseSummary.addEventListener("click", () => {
+      summaryPanel.style.display = "none";
+    });
+  }
+
+  // ── BUG FIX: was using pan.x / pan.y (undefined), now uses panX / panY ──
 
   function completeMeasureDistance(p1, p2) {
     const distPx = pixelDistance(p1, p2);
@@ -546,7 +569,10 @@
     const scaleLabel = scale ? scale.raw : "no scale";
 
     const m = { type: "distance", points: [p1, p2], text: label, scale: scaleLabel, category: null };
-    showLabelPopup(m, mouseImg.x * zoom + pan.x, mouseImg.y * zoom + pan.y);
+
+    // FIX: use panX/panY instead of pan.x/pan.y
+    const canvasPos = imageToCanvas(mouseImg.x, mouseImg.y);
+    showLabelPopup(m, canvasPos.x, canvasPos.y);
   }
 
   function completeMeasureArea(pts) {
@@ -557,7 +583,10 @@
     const scaleLabel = scale ? scale.raw : "no scale";
 
     const m = { type: "area", points: [...pts], text: label, scale: scaleLabel, category: null };
-    showLabelPopup(m, mouseImg.x * zoom + pan.x, mouseImg.y * zoom + pan.y);
+
+    // FIX: use panX/panY instead of pan.x/pan.y
+    const canvasPos = imageToCanvas(mouseImg.x, mouseImg.y);
+    showLabelPopup(m, canvasPos.x, canvasPos.y);
   }
 
   function clearMeasurements() {
@@ -565,7 +594,7 @@
     distPoint1 = null;
     polyPoints = [];
     pendingMeasurement = null;
-    labelPopup.style.display = "none";
+    if (labelPopup) labelPopup.style.display = "none";
     showResult("");
     draw();
     renderSummary();
@@ -581,7 +610,6 @@
   canvas.addEventListener("mousedown", (e) => {
     if (!pageImage) return;
 
-    // Middle button or ctrl+left = pan
     if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
       e.preventDefault();
       isPanning = true;
@@ -593,10 +621,8 @@
     const pos = getMousePos(e);
     const imgPos = canvasToImage(pos.x, pos.y);
 
-    // Bounds check
     if (imgPos.x < 0 || imgPos.y < 0 || imgPos.x > pageImage.width || imgPos.y > pageImage.height) return;
 
-    // Right click
     if (e.button === 2) {
       e.preventDefault();
       if (mode === "distance") {
@@ -610,7 +636,6 @@
       return;
     }
 
-    // Left click
     if (e.button === 0 && !e.ctrlKey) {
       if (mode === "distance") {
         if (!distPoint1) {
@@ -642,12 +667,10 @@
     const imgPos = canvasToImage(pos.x, pos.y);
     mouseImg = imgPos;
 
-    // Update cursor info
     if (cursorInfo && imgPos.x >= 0 && imgPos.y >= 0 && imgPos.x <= (pageImage?.width || 0) && imgPos.y <= (pageImage?.height || 0)) {
       cursorInfo.textContent = `${Math.round(imgPos.x)}, ${Math.round(imgPos.y)} px`;
     }
 
-    // Redraw for rubber band
     if ((mode === "distance" && distPoint1) || (mode === "area" && polyPoints.length > 0)) {
       draw();
     }
@@ -656,7 +679,7 @@
   canvas.addEventListener("mouseup", () => {
     if (isPanning) {
       isPanning = false;
-      canvas.style.cursor = mode === "distance" ? "crosshair" : "crosshair";
+      canvas.style.cursor = "crosshair";
     }
   });
 
@@ -669,7 +692,6 @@
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
     zoom = Math.max(0.1, Math.min(30, zoom * factor));
 
-    // Adjust pan so zoom centers on mouse
     panX = pos.x - imgBefore.x * fitScale * zoom;
     panY = pos.y - imgBefore.y * fitScale * zoom;
 
@@ -690,7 +712,7 @@
   if (btnDistance) btnDistance.addEventListener("click", () => {
     mode = "distance";
     btnDistance.classList.add("active");
-    btnArea.classList.remove("active");
+    if (btnArea) btnArea.classList.remove("active");
     distPoint1 = null;
     polyPoints = [];
     canvas.style.cursor = "crosshair";
@@ -701,7 +723,7 @@
   if (btnArea) btnArea.addEventListener("click", () => {
     mode = "area";
     btnArea.classList.add("active");
-    btnDistance.classList.remove("active");
+    if (btnDistance) btnDistance.classList.remove("active");
     distPoint1 = null;
     polyPoints = [];
     canvas.style.cursor = "crosshair";
@@ -737,12 +759,15 @@
   canvas.style.cursor = "crosshair";
   resizeCanvas();
 
-  // Check backend health
+  // Check backend health (with cold-start awareness)
+  setStatus("Connecting to server…", false);
   fetch(`${API_BASE}/api/health`)
-    .then((r) => r.ok ? setStatus("Backend connected", true) : setStatus("Backend offline — start server", false))
-    .catch(() => setStatus("Backend offline — start the FastAPI server", false));
+    .then((r) => r.ok
+      ? setStatus("Backend connected ✓", true)
+      : setStatus("Backend offline — start server", false))
+    .catch(() => setStatus("Server is waking up — please wait…", false));
 
-  // ── Landing page scroll effect (runs on index.html too) ───────
+  // ── Landing page scroll effect ─────────────────────────────────
   const header = document.getElementById("mainHeader");
   if (header) {
     window.addEventListener("scroll", () => {
