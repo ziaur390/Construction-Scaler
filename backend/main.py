@@ -140,23 +140,27 @@ async def get_page(session_id: str, page_num: int):
 
 @app.post("/api/register")
 async def register(data: dict, db: Session = Depends(get_db)):
-    email = data.get("email")
-    username = data.get("username")
-    password = data.get("password")
-    
-    if not email or not username or not password:
-        raise HTTPException(status_code=400, detail="Missing fields")
+    try:
+        email = data.get("email")
+        username = data.get("username")
+        password = data.get("password")
         
-    db_user = db.query(models.User).filter((models.User.email == email) | (models.User.username == username)).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email or username already registered")
-        
-    hashed_password = auth.get_password_hash(password)
-    new_user = models.User(email=email, username=username, hashed_password=hashed_password)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return {"message": "User registered successfully"}
+        if not email or not username or not password:
+            raise HTTPException(status_code=400, detail="Missing fields")
+            
+        db_user = db.query(models.User).filter((models.User.email == email) | (models.User.username == username)).first()
+        if db_user:
+            raise HTTPException(status_code=400, detail="Email or username already registered")
+            
+        hashed_password = auth.get_password_hash(password)
+        new_user = models.User(email=email, username=username, hashed_password=hashed_password)
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return {"message": "User registered successfully"}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
 
 @app.post("/api/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
