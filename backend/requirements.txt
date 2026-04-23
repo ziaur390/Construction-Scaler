@@ -6,3 +6,5 @@ sqlalchemy==2.0.35
 psycopg2-binary==2.9.9
 pytesseract==0.3.13
 Pillow==10.4.0
+passlib[bcrypt]==1.7.4
+PyJWT==2.8.0

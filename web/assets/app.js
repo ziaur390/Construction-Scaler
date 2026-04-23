@@ -13,6 +13,15 @@
       ? "http://127.0.0.1:8000"
       : "https://construction-scaler.onrender.com";
 
+  // ── Auth Check ──────────────────────────────────────────────────
+  const token = localStorage.getItem("cs_token");
+  const username = localStorage.getItem("cs_username");
+  
+  if (!token) {
+    window.location.href = "./login.html";
+    return;
+  }
+
   // ── DOM Elements ───────────────────────────────────────────────
   const canvas = document.getElementById("measureCanvas");
   if (!canvas) return; // Not on the workspace page
@@ -45,6 +54,19 @@
   const labelPopup = document.getElementById("labelPopup");
   const labelBtns = document.querySelectorAll(".label-btn");
   const btnSkipLabel = document.getElementById("btnSkipLabel");
+  
+  const userGreeting = document.getElementById("userGreeting");
+  const btnLogout = document.getElementById("btnLogout");
+
+  if (userGreeting) userGreeting.textContent = `Welcome, ${username}`;
+  
+  if (btnLogout) {
+    btnLogout.addEventListener("click", () => {
+      localStorage.removeItem("cs_token");
+      localStorage.removeItem("cs_username");
+      window.location.href = "./login.html";
+    });
+  }
 
   // ── State ──────────────────────────────────────────────────────
   let sessionId = null;
@@ -430,7 +452,10 @@
     try {
       await fetch(`${API_BASE}/api/measurements`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           session_id: sessionId,
           filename: currentFilename,
@@ -450,7 +475,9 @@
   async function loadMeasurementsFromDB(pageNum) {
     if (!currentFilename) return;
     try {
-      const res = await fetch(`${API_BASE}/api/measurements/${currentFilename}`);
+      const res = await fetch(`${API_BASE}/api/measurements/${currentFilename}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       if (res.ok) {
         const data = await res.json();
         measurements = data
