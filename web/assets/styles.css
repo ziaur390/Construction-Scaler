@@ -754,6 +754,111 @@ a {
   gap: 10px;
 }
 
+/* Label Popup */
+.label-popup {
+  position: absolute;
+  z-index: 50;
+  background: white;
+  border: 1px solid var(--nav-border);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  width: 240px;
+}
+.label-popup-header {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  color: var(--nav-ink);
+}
+.label-popup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.label-btn {
+  padding: 8px;
+  font-size: 0.8rem;
+  background: var(--nav-paper);
+  border: 1px solid var(--nav-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--nav-ink);
+}
+.label-btn:hover {
+  background: var(--nav-accent);
+  color: white;
+  border-color: var(--nav-accent);
+}
+
+/* Summary Panel */
+.summary-panel {
+  position: absolute;
+  top: 60px; /* Below toolbar */
+  right: 0;
+  bottom: 34px; /* Above status bar */
+  width: 320px;
+  background: white;
+  border-left: 1px solid var(--nav-border);
+  box-shadow: -4px 0 15px rgba(0,0,0,0.05);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+}
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--nav-border);
+  background: var(--nav-paper);
+}
+.summary-header h3 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1rem;
+}
+.summary-content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+.summary-group {
+  margin-bottom: 16px;
+  border: 1px solid var(--nav-border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--nav-paper);
+}
+.summary-group-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+.summary-item {
+  font-size: 0.8rem;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--nav-border);
+  display: flex;
+  justify-content: space-between;
+}
+.summary-item:last-child {
+  border-bottom: none;
+}
+.summary-total {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 2px solid var(--nav-border);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .tool-grid {

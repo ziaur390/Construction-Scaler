@@ -10,6 +10,9 @@ import re
 from typing import List
 
 import fitz  # PyMuPDF
+import io
+import pytesseract
+from PIL import Image
 
 BASE_DPI = 150  # Lower than desktop (200) for faster web transfer
 
@@ -115,6 +118,31 @@ def _detect_scales(page: fitz.Page) -> List[dict]:
                     "raw": raw or ln["text"],
                     "label": f"{kind}: {raw}" if raw else kind,
                 })
+    # Fallback to OCR if no scales found in text layer
+    if not scales:
+        print("[OCR] No scales found in text layer, falling back to OCR...")
+        try:
+            # Render page at 200 DPI for OCR
+            pix = page.get_pixmap(matrix=fitz.Matrix(200/72.0, 200/72.0), alpha=False)
+            img = Image.open(io.BytesIO(pix.tobytes("png")))
+            ocr_text = pytesseract.image_to_string(img)
+            
+            for line in ocr_text.split('\n'):
+                if line.strip():
+                    kind, ratio, raw = parse_scale(line)
+                    if kind in ("OK", "NTS", "AS_NOTED"):
+                        key = (kind, raw)
+                        if key not in seen:
+                            seen.add(key)
+                            scales.append({
+                                "kind": kind,
+                                "ratio": ratio,
+                                "raw": raw or line.strip(),
+                                "label": f"{kind} (OCR): {raw}" if raw else f"{kind} (OCR)"
+                            })
+        except Exception as e:
+            print(f"[OCR] Fallback failed: {e}")
+
     return scales
 
 

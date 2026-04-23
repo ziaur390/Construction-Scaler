@@ -13,4 +13,5 @@ class Measurement(Base):
     points = Column(JSON) # List of {x, y}
     result_text = Column(String)
     scale_label = Column(String)
+    category_label = Column(String, nullable=True) # E.g., Bedroom, Bathroom, etc.
     timestamp = Column(DateTime, default=datetime.utcnow)

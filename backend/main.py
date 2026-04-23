@@ -144,7 +144,8 @@ async def save_measurement(data: dict, db: Session = Depends(get_db)):
         type=data.get("type"),
         points=data.get("points"),
         result_text=data.get("result_text"),
-        scale_label=data.get("scale_label")
+        scale_label=data.get("scale_label"),
+        category_label=data.get("category_label")
     )
     db.add(new_m)
     db.commit()

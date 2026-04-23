@@ -37,6 +37,16 @@
   const cursorInfo = document.getElementById("cursorInfo");
   const zoomInfo = document.getElementById("zoomInfo");
 
+  // New UI Elements
+  const btnSummary = document.getElementById("btnSummary");
+  const summaryPanel = document.getElementById("summaryPanel");
+  const btnCloseSummary = document.getElementById("btnCloseSummary");
+  const summaryContent = document.getElementById("summaryContent");
+  
+  const labelPopup = document.getElementById("labelPopup");
+  const labelBtns = document.querySelectorAll(".label-btn");
+  const btnSkipLabel = document.getElementById("btnSkipLabel");
+
   // ── State ──────────────────────────────────────────────────────
   let sessionId = null;
   let currentFilename = "";
@@ -58,6 +68,8 @@
   let distPoint1 = null; // {x, y} in image coords
   let polyPoints = []; // [{x,y}, ...] in image coords
   let mouseImg = null; // current mouse in image coords
+  
+  let pendingMeasurement = null; // Holds measurement before labeling
 
   // Completed measurements for overlay
   let measurements = []; // [{type, points, text, scale}]
@@ -409,7 +421,8 @@
           type: m.type,
           points: m.points,
           result_text: m.text,
-          scale_label: m.scale
+          scale_label: m.scale,
+          category_label: m.category || null
         })
       });
     } catch (err) {
@@ -430,7 +443,8 @@
             type: m.type,
             points: m.points,
             text: m.result_text,
-            scale: m.scale_label
+            scale: m.scale_label,
+            category: m.category_label || null
           }));
         draw();
       }
@@ -439,6 +453,91 @@
     }
   }
 
+  // ── Measurement Labeling & Summary ─────────────────────────────
+
+  function showLabelPopup(m, x, y) {
+    pendingMeasurement = m;
+    labelPopup.style.display = "block";
+    
+    // Position near the click
+    const rect = canvas.getBoundingClientRect();
+    let px = rect.left + x + 20;
+    let py = rect.top + y - 20;
+    
+    // Keep in bounds
+    if (px + 240 > window.innerWidth) px = window.innerWidth - 250;
+    if (py + 200 > window.innerHeight) py = window.innerHeight - 210;
+    
+    labelPopup.style.left = `${px}px`;
+    labelPopup.style.top = `${py}px`;
+  }
+
+  function finalizeMeasurement(category) {
+    if (!pendingMeasurement) return;
+    pendingMeasurement.category = category;
+    measurements.push(pendingMeasurement);
+    saveMeasurementToDB(pendingMeasurement);
+    showResult(`${pendingMeasurement.text}  (${pendingMeasurement.scale})` + (category ? ` - ${category}` : ''));
+    setStatus(`${pendingMeasurement.type === 'area' ? 'Area' : 'Distance'}: ${pendingMeasurement.text}`, true);
+    pendingMeasurement = null;
+    labelPopup.style.display = "none";
+    draw();
+    renderSummary();
+  }
+
+  labelBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      finalizeMeasurement(btn.textContent);
+    });
+  });
+
+  btnSkipLabel.addEventListener("click", () => {
+    finalizeMeasurement(null);
+  });
+
+  function renderSummary() {
+    summaryContent.innerHTML = "";
+    if (measurements.length === 0) {
+      summaryContent.innerHTML = "<p style='opacity:0.6;font-size:0.85rem;text-align:center;margin-top:20px;'>No measurements yet.</p>";
+      return;
+    }
+
+    const groups = {};
+    measurements.forEach(m => {
+      const cat = m.category || "Uncategorized";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(m);
+    });
+
+    for (const [cat, items] of Object.entries(groups)) {
+      const groupEl = document.createElement("div");
+      groupEl.className = "summary-group";
+      
+      const title = document.createElement("div");
+      title.className = "summary-group-title";
+      title.innerHTML = `<span>${cat}</span><span>${items.length} item(s)</span>`;
+      groupEl.appendChild(title);
+
+      items.forEach(item => {
+        const itemEl = document.createElement("div");
+        itemEl.className = "summary-item";
+        itemEl.innerHTML = `<span>${item.type === 'area' ? 'Area' : 'Distance'}</span><span>${item.text}</span>`;
+        groupEl.appendChild(itemEl);
+      });
+
+      summaryContent.appendChild(groupEl);
+    }
+  }
+
+  btnSummary.addEventListener("click", () => {
+    summaryPanel.style.display = summaryPanel.style.display === "none" ? "flex" : "none";
+    if (summaryPanel.style.display === "flex") renderSummary();
+  });
+
+  btnCloseSummary.addEventListener("click", () => {
+    summaryPanel.style.display = "none";
+  });
+
   function completeMeasureDistance(p1, p2) {
     const distPx = pixelDistance(p1, p2);
     const paperIn = distPx / pageDPI;
@@ -446,11 +545,8 @@
     const label = formatDistance(paperIn, scale);
     const scaleLabel = scale ? scale.raw : "no scale";
 
-    const m = { type: "distance", points: [p1, p2], text: label, scale: scaleLabel };
-    measurements.push(m);
-    saveMeasurementToDB(m);
-    showResult(`${label}  (${scaleLabel})`);
-    setStatus(`Distance: ${label}`, true);
+    const m = { type: "distance", points: [p1, p2], text: label, scale: scaleLabel, category: null };
+    showLabelPopup(m, mouseImg.x * zoom + pan.x, mouseImg.y * zoom + pan.y);
   }
 
   function completeMeasureArea(pts) {
@@ -460,19 +556,19 @@
     const label = formatArea(paperIn2, scale);
     const scaleLabel = scale ? scale.raw : "no scale";
 
-    const m = { type: "area", points: [...pts], text: label, scale: scaleLabel };
-    measurements.push(m);
-    saveMeasurementToDB(m);
-    showResult(`${label}  (${scaleLabel})`);
-    setStatus(`Area: ${label}`, true);
+    const m = { type: "area", points: [...pts], text: label, scale: scaleLabel, category: null };
+    showLabelPopup(m, mouseImg.x * zoom + pan.x, mouseImg.y * zoom + pan.y);
   }
 
   function clearMeasurements() {
     measurements = [];
     distPoint1 = null;
     polyPoints = [];
+    pendingMeasurement = null;
+    labelPopup.style.display = "none";
     showResult("");
     draw();
+    renderSummary();
   }
 
   // ── Event Handlers ─────────────────────────────────────────────
