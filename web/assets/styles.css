@@ -861,11 +861,8 @@ a {
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .tool-grid {
-    grid-template-columns: 320px 1fr;
-  }
-  .inspector {
-    grid-column: span 2;
+  .hero {
+    padding: 60px 24px;
   }
 }
 
@@ -873,17 +870,93 @@ a {
   .hero {
     grid-template-columns: 1fr;
     text-align: center;
+    padding: 40px 24px;
   }
   .hero-actions {
     justify-content: center;
+    flex-direction: column;
   }
-  .tool-grid {
-    grid-template-columns: 1fr;
+  .hero-text {
+    margin: 0 auto 32px;
   }
-  .inspector, .sidebar {
-    grid-column: span 1;
+  .hero-card {
+    transform: none;
+    margin-top: 40px;
   }
-  .workspace-status-bar {
-    grid-template-columns: 1fr 1fr;
+  .hero-card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .topbar {
+    padding: 12px 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .workspace-toolbar {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+    top: auto; /* Might need adjustment if header is sticky */
+  }
+  
+  .toolbar-group {
+    flex-wrap: wrap;
+  }
+
+  .control-stack-horizontal {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .control-stack-horizontal .control-pill {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .summary-panel {
+    width: 100%;
+    height: 60%;
+    top: auto;
+    bottom: 34px;
+    border-left: none;
+    border-top: 1px solid var(--nav-border);
+  }
+
+  .label-popup {
+    width: 90%;
+    left: 5% !important;
+    right: 5% !important;
+  }
+  
+  .status-bar {
+    flex-direction: column;
+    padding: 10px;
+    height: auto;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-copy strong {
+    font-size: 0.95rem;
+  }
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+  .hero-copy h1 {
+    font-size: 2.5rem;
   }
 }
