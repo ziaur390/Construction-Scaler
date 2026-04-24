@@ -965,23 +965,51 @@
 
   if (btnDistance) btnDistance.addEventListener("click", () => {
     mode = "distance";
+    document.querySelectorAll(".control-pill").forEach(b => b.classList.remove("active"));
     btnDistance.classList.add("active");
-    if (btnArea) btnArea.classList.remove("active");
-    distPoint1 = null;
-    polyPoints = [];
+    distPoint1 = null; polyPoints = [];
     canvas.style.cursor = "crosshair";
     setStatus("Mode: Distance — click two points to measure", true);
     draw();
   });
 
+  if (btnPolyline) btnPolyline.addEventListener("click", () => {
+    mode = "polyline";
+    document.querySelectorAll(".control-pill").forEach(b => b.classList.remove("active"));
+    btnPolyline.classList.add("active");
+    distPoint1 = null; polyPoints = [];
+    canvas.style.cursor = "crosshair";
+    setStatus("Mode: Polyline — left-click points, right-click to finish", true);
+    draw();
+  });
+
   if (btnArea) btnArea.addEventListener("click", () => {
     mode = "area";
+    document.querySelectorAll(".control-pill").forEach(b => b.classList.remove("active"));
     btnArea.classList.add("active");
-    if (btnDistance) btnDistance.classList.remove("active");
-    distPoint1 = null;
-    polyPoints = [];
+    distPoint1 = null; polyPoints = [];
     canvas.style.cursor = "crosshair";
     setStatus("Mode: Area — click points, right-click to close polygon", true);
+    draw();
+  });
+
+  if (btnCount) btnCount.addEventListener("click", () => {
+    mode = "count";
+    document.querySelectorAll(".control-pill").forEach(b => b.classList.remove("active"));
+    btnCount.classList.add("active");
+    distPoint1 = null; polyPoints = [];
+    canvas.style.cursor = "crosshair";
+    setStatus("Mode: Count — click to place markers", true);
+    draw();
+  });
+
+  if (btnCalibrate) btnCalibrate.addEventListener("click", () => {
+    mode = "calibrate";
+    document.querySelectorAll(".control-pill").forEach(b => b.classList.remove("active"));
+    btnCalibrate.classList.add("active");
+    distPoint1 = null; polyPoints = [];
+    canvas.style.cursor = "crosshair";
+    setStatus("Mode: Calibrate — click two points of a known distance", true);
     draw();
   });
 
