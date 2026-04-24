@@ -31,7 +31,10 @@
   const btnImport = document.getElementById("btnImport");
   const btnImport2 = document.getElementById("btnImport2");
   const btnDistance = document.getElementById("btnDistance");
+  const btnPolyline = document.getElementById("btnPolyline");
   const btnArea = document.getElementById("btnArea");
+  const btnCount = document.getElementById("btnCount");
+  const btnCalibrate = document.getElementById("btnCalibrate");
   const btnPrev = document.getElementById("btnPrev");
   const btnNext = document.getElementById("btnNext");
   const btnClear = document.getElementById("btnClear");
@@ -78,7 +81,7 @@
   let pageImage = null;
   let scales = [];
 
-  let mode = "distance"; // "distance" | "area"
+  let mode = "distance"; // "distance" | "polyline" | "area" | "count" | "calibrate"
 
   // View transform
   let zoom = 1;
@@ -95,6 +98,18 @@
 
   // Completed measurements for overlay
   let measurements = [];
+  let hiddenCategories = {};
+
+  const categoryColors = {
+    "Plumbing": "#3b82f6",     // Blue
+    "Electrical": "#ef4444",   // Red
+    "HVAC": "#f97316",         // Orange
+    "Framing": "#8b5cf6",      // Purple
+    "Concrete": "#64748b",     // Slate
+    "Area": "#10b981",         // Green
+    "Count": "#eab308",        // Yellow
+    "Uncategorized": "#0f172a" // Ink
+  };
 
   // Pan drag state
   let isPanning = false;
@@ -214,22 +229,40 @@
     ctx.drawImage(pageImage, 0, 0);
 
     for (const m of measurements) {
+      const cat = m.category || "Uncategorized";
+      if (hiddenCategories[cat]) continue;
+      
+      const color = categoryColors[cat] || categoryColors["Uncategorized"];
+
       if (m.type === "distance") {
-        drawDistanceLine(m.points[0], m.points[1], m.text);
+        drawDistanceLine(m.points[0], m.points[1], m.text, color);
       } else if (m.type === "area") {
-        drawPolygon(m.points, m.text);
+        drawPolygon(m.points, m.text, color);
+      } else if (m.type === "polyline") {
+        drawPolyline(m.points, m.text, color);
+      } else if (m.type === "count") {
+        drawCountPoint(m.points[0], color);
       }
     }
 
     if (mode === "distance" && distPoint1) {
       drawPoint(distPoint1, "#3b82f6");
       if (mouseImg) {
-        drawRubberLine(distPoint1, mouseImg);
+        drawRubberLine(distPoint1, mouseImg, "#3b82f6");
       }
     }
 
-    if (mode === "area" && polyPoints.length > 0) {
-      ctx.strokeStyle = "#8b5cf6";
+    if (mode === "calibrate" && distPoint1) {
+      drawPoint(distPoint1, "#f59e0b");
+      if (mouseImg) {
+        drawRubberLine(distPoint1, mouseImg, "#f59e0b");
+      }
+    }
+
+    if ((mode === "area" || mode === "polyline") && polyPoints.length > 0) {
+      const isArea = mode === "area";
+      const color = isArea ? "#8b5cf6" : "#f97316";
+      ctx.strokeStyle = color;
       ctx.lineWidth = 2 / (fitScale * zoom);
       ctx.setLineDash([6 / (fitScale * zoom), 4 / (fitScale * zoom)]);
       ctx.beginPath();
@@ -240,9 +273,12 @@
       if (mouseImg) {
         ctx.lineTo(mouseImg.x, mouseImg.y);
       }
+      if (isArea && mouseImg) {
+        ctx.lineTo(polyPoints[0].x, polyPoints[0].y); // Close path visually
+      }
       ctx.stroke();
       ctx.setLineDash([]);
-      for (const p of polyPoints) drawPoint(p, "#8b5cf6");
+      for (const p of polyPoints) drawPoint(p, color);
     }
 
     ctx.restore();
@@ -259,8 +295,8 @@
     ctx.stroke();
   }
 
-  function drawRubberLine(a, b) {
-    ctx.strokeStyle = "rgba(59,130,246,0.6)";
+  function drawRubberLine(a, b, color = "rgba(59,130,246,0.6)") {
+    ctx.strokeStyle = color;
     ctx.lineWidth = 2 / (fitScale * zoom);
     ctx.setLineDash([6 / (fitScale * zoom), 4 / (fitScale * zoom)]);
     ctx.beginPath();
@@ -270,40 +306,52 @@
     ctx.setLineDash([]);
   }
 
-  function drawDistanceLine(a, b, label) {
+  function drawDistanceLine(a, b, label, color = "#3b82f6") {
     const lw = 2.5 / (fitScale * zoom);
-    ctx.strokeStyle = "#3b82f6";
+    ctx.strokeStyle = color;
     ctx.lineWidth = lw;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
-    drawPoint(a, "#3b82f6");
-    drawPoint(b, "#3b82f6");
+    drawPoint(a, color);
+    drawPoint(b, color);
 
     if (label) {
       const mx = (a.x + b.x) / 2;
       const my = (a.y + b.y) / 2;
-      const fs = Math.max(12, 14 / (fitScale * zoom));
-      ctx.font = `bold ${fs}px "Space Grotesk", sans-serif`;
-      const tw = ctx.measureText(label).width;
-      const pad = 6 / (fitScale * zoom);
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillRect(mx - tw / 2 - pad, my - fs / 2 - pad, tw + pad * 2, fs + pad * 2);
-      ctx.strokeStyle = "#3b82f6";
-      ctx.lineWidth = 1 / (fitScale * zoom);
-      ctx.strokeRect(mx - tw / 2 - pad, my - fs / 2 - pad, tw + pad * 2, fs + pad * 2);
-      ctx.fillStyle = "#0f172a";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, mx, my);
+      drawLabelBox(label, mx, my, color);
     }
   }
 
-  function drawPolygon(pts, label) {
+  function drawPolyline(pts, label, color = "#f97316") {
+    if (pts.length < 2) return;
+    const lw = 2.5 / (fitScale * zoom);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    for (const p of pts) drawPoint(p, color);
+
+    if (label) {
+      const last = pts[pts.length - 1];
+      drawLabelBox(label, last.x, last.y - 20 / (fitScale * zoom), color);
+    }
+  }
+
+  function drawPolygon(pts, label, color = "#8b5cf6") {
     if (pts.length < 3) return;
-    ctx.fillStyle = "rgba(139,92,246,0.15)";
-    ctx.strokeStyle = "#8b5cf6";
+    // Extract RGB from hex for fill
+    let r=139, g=92, b=246; // default purple
+    if (color.startsWith("#") && color.length === 7) {
+      r = parseInt(color.slice(1,3), 16);
+      g = parseInt(color.slice(3,5), 16);
+      b = parseInt(color.slice(5,7), 16);
+    }
+    ctx.fillStyle = `rgba(${r},${g},${b},0.15)`;
+    ctx.strokeStyle = color;
     ctx.lineWidth = 2.5 / (fitScale * zoom);
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
@@ -311,25 +359,40 @@
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    for (const p of pts) drawPoint(p, "#8b5cf6");
+    for (const p of pts) drawPoint(p, color);
 
     if (label) {
       const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
       const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-      const fs = Math.max(12, 14 / (fitScale * zoom));
-      ctx.font = `bold ${fs}px "Space Grotesk", sans-serif`;
-      const tw = ctx.measureText(label).width;
-      const pad = 6 / (fitScale * zoom);
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillRect(cx - tw / 2 - pad, cy - fs / 2 - pad, tw + pad * 2, fs + pad * 2);
-      ctx.strokeStyle = "#8b5cf6";
-      ctx.lineWidth = 1 / (fitScale * zoom);
-      ctx.strokeRect(cx - tw / 2 - pad, cy - fs / 2 - pad, tw + pad * 2, fs + pad * 2);
-      ctx.fillStyle = "#0f172a";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, cx, cy);
+      drawLabelBox(label, cx, cy, color);
     }
+  }
+
+  function drawCountPoint(p, color = "#eab308") {
+    const r = 8 / (fitScale * zoom);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2 / (fitScale * zoom);
+    ctx.stroke();
+  }
+
+  function drawLabelBox(text, x, y, borderColor) {
+    const fs = Math.max(12, 14 / (fitScale * zoom));
+    ctx.font = `bold ${fs}px "Space Grotesk", sans-serif`;
+    const tw = ctx.measureText(text).width;
+    const pad = 6 / (fitScale * zoom);
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillRect(x - tw / 2 - pad, y - fs / 2 - pad, tw + pad * 2, fs + pad * 2);
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1 / (fitScale * zoom);
+    ctx.strokeRect(x - tw / 2 - pad, y - fs / 2 - pad, tw + pad * 2, fs + pad * 2);
+    ctx.fillStyle = "#0f172a";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x, y);
   }
 
   // ── API ────────────────────────────────────────────────────────
@@ -566,13 +629,44 @@
 
       const title = document.createElement("div");
       title.className = "summary-group-title";
-      title.innerHTML = `<span>${cat}</span><span>${items.length} item(s)</span>`;
+      title.style.display = "flex";
+      title.style.justifyContent = "space-between";
+      title.style.alignItems = "center";
+      
+      const labelDiv = document.createElement("div");
+      labelDiv.style.display = "flex";
+      labelDiv.style.alignItems = "center";
+      labelDiv.style.gap = "8px";
+
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = !hiddenCategories[cat];
+      chk.addEventListener("change", (e) => {
+        hiddenCategories[cat] = !e.target.checked;
+        draw();
+      });
+
+      const colorDot = document.createElement("span");
+      colorDot.style.display = "inline-block";
+      colorDot.style.width = "10px";
+      colorDot.style.height = "10px";
+      colorDot.style.borderRadius = "50%";
+      colorDot.style.backgroundColor = categoryColors[cat] || categoryColors["Uncategorized"];
+
+      labelDiv.appendChild(chk);
+      labelDiv.appendChild(colorDot);
+      labelDiv.appendChild(document.createTextNode(cat));
+
+      title.appendChild(labelDiv);
+      title.appendChild(document.createTextNode(`${items.length} item(s)`));
+      
       groupEl.appendChild(title);
 
       items.forEach(item => {
         const itemEl = document.createElement("div");
         itemEl.className = "summary-item";
-        itemEl.innerHTML = `<span>${item.type === 'area' ? 'Area' : 'Distance'}</span><span>${item.text}</span>`;
+        const t = item.type.charAt(0).toUpperCase() + item.type.slice(1);
+        itemEl.innerHTML = `<span>${t}</span><span>${item.text}</span>`;
         groupEl.appendChild(itemEl);
       });
 
@@ -657,9 +751,75 @@
 
     const m = { type: "area", points: [...pts], text: label, scale: scaleLabel, category: null };
 
-    // FIX: use panX/panY instead of pan.x/pan.y
     const canvasPos = imageToCanvas(mouseImg.x, mouseImg.y);
     showLabelPopup(m, canvasPos.x, canvasPos.y);
+  }
+
+  function completeMeasurePolyline(pts) {
+    let totalPx = 0;
+    for (let i = 1; i < pts.length; i++) {
+      totalPx += pixelDistance(pts[i - 1], pts[i]);
+    }
+    const paperIn = totalPx / pageDPI;
+    const scale = getSelectedScale();
+    const label = formatDistance(paperIn, scale);
+    const scaleLabel = scale ? scale.raw : "no scale";
+
+    const m = { type: "polyline", points: [...pts], text: label, scale: scaleLabel, category: null };
+
+    const canvasPos = imageToCanvas(mouseImg.x, mouseImg.y);
+    showLabelPopup(m, canvasPos.x, canvasPos.y);
+  }
+
+  function completeMeasureCount(pt) {
+    const m = { type: "count", points: [pt], text: "1", scale: "N/A", category: null };
+    const canvasPos = imageToCanvas(pt.x, pt.y);
+    showLabelPopup(m, canvasPos.x, canvasPos.y);
+  }
+
+  function completeCalibrate(p1, p2) {
+    const distPx = pixelDistance(p1, p2);
+    const paperIn = distPx / pageDPI;
+
+    const input = prompt("Enter the real-world distance of this line in feet (e.g., 3 for a 3ft door):");
+    if (!input) return;
+
+    const realFt = parseFloat(input);
+    if (isNaN(realFt) || realFt <= 0) {
+      alert("Invalid distance entered.");
+      return;
+    }
+
+    const realIn = realFt * 12;
+    // ratio is paper / real
+    const ratio = paperIn / realIn;
+
+    // Convert ratio back to multiplier to show custom scale name (e.g., 1/8" = 1'0" is 1/96 ratio)
+    const multiplier = Math.round(1 / ratio);
+    const raw = `Calibrated 1:${multiplier}`;
+    const newScale = {
+      kind: "OK",
+      ratio: ratio,
+      raw: raw,
+      label: raw
+    };
+    scales.push(newScale);
+
+    // Remove custom option temporarily
+    const lastOpt = scaleSelect.lastElementChild;
+    if (lastOpt && lastOpt.value === "custom") scaleSelect.removeChild(lastOpt);
+
+    // Add new scale
+    const opt = document.createElement("option");
+    opt.value = scales.length - 1;
+    opt.textContent = newScale.label;
+    scaleSelect.appendChild(opt);
+
+    // Put custom option back
+    if (lastOpt && lastOpt.value === "custom") scaleSelect.appendChild(lastOpt);
+
+    scaleSelect.value = scales.length - 1;
+    setStatus(`Calibrated scale: ${raw}`, true);
   }
 
   function clearMeasurements() {
@@ -698,11 +858,18 @@
 
     if (e.button === 2) {
       e.preventDefault();
-      if (mode === "distance") {
+      if (mode === "distance" || mode === "calibrate") {
         distPoint1 = null;
         draw();
       } else if (mode === "area" && polyPoints.length >= 3) {
         completeMeasureArea(polyPoints);
+        polyPoints = [];
+        draw();
+      } else if (mode === "polyline" && polyPoints.length >= 2) {
+        completeMeasurePolyline(polyPoints);
+        polyPoints = [];
+        draw();
+      } else {
         polyPoints = [];
         draw();
       }
@@ -718,7 +885,19 @@
           distPoint1 = null;
         }
         draw();
+      } else if (mode === "calibrate") {
+        if (!distPoint1) {
+          distPoint1 = imgPos;
+        } else {
+          completeCalibrate(distPoint1, imgPos);
+          distPoint1 = null;
+        }
+        draw();
+      } else if (mode === "count") {
+        completeMeasureCount(imgPos);
+        draw();
       } else {
+        // polyline or area
         polyPoints.push(imgPos);
         draw();
       }
@@ -744,7 +923,9 @@
       cursorInfo.textContent = `${Math.round(imgPos.x)}, ${Math.round(imgPos.y)} px`;
     }
 
-    if ((mode === "distance" && distPoint1) || (mode === "area" && polyPoints.length > 0)) {
+    if ((mode === "distance" || mode === "calibrate") && distPoint1) {
+      draw();
+    } else if ((mode === "area" || mode === "polyline") && polyPoints.length > 0) {
       draw();
     }
   });
@@ -860,12 +1041,28 @@
   document.addEventListener("keydown", (e) => {
     if (!pageImage) return;
     if (e.key === "Escape") { distPoint1 = null; polyPoints = []; draw(); }
-    if (e.key === "ArrowRight" || e.key === "n") { if (currentPage < pageCount) loadPage(currentPage + 1); }
-    if (e.key === "ArrowLeft" || e.key === "p") { if (currentPage > 1) loadPage(currentPage - 1); }
+    if (e.key === "ArrowRight") { if (currentPage < pageCount) loadPage(currentPage + 1); }
+    if (e.key === "ArrowLeft") { if (currentPage > 1) loadPage(currentPage - 1); }
     if (e.key === "r") { fitView(); draw(); }
-    if (e.key === "d") { btnDistance?.click(); }
-    if (e.key === "a") { btnArea?.click(); }
     if (e.key === "c") { clearMeasurements(); }
+    if (e.key === "z" && e.ctrlKey) {
+      // Undo logic
+      if (mode === "distance" && distPoint1) {
+        distPoint1 = null;
+        draw();
+      } else if ((mode === "area" || mode === "polyline") && polyPoints.length > 0) {
+        polyPoints.pop();
+        draw();
+      } else if (measurements.length > 0) {
+        // Remove last measurement
+        const lastM = measurements.pop();
+        // Since we don't have a backend delete endpoint yet, we just remove it locally.
+        // A full implementation would delete it from the server.
+        draw();
+        renderSummary();
+        setStatus("Undo: removed last measurement.", true);
+      }
+    }
   });
 
   // ── Init ───────────────────────────────────────────────────────
