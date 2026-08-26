@@ -955,6 +955,123 @@
 
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
+  // ── Touch Support (Mobile) ─────────────────────────────────
+  let lastTouchDist = 0;
+  let lastTouchCenter = null;
+  let touchStartTime = 0;
+  let touchStartPos = null;
+
+  canvas.addEventListener("touchstart", (e) => {
+    if (!pageImage) return;
+    e.preventDefault();
+
+    if (e.touches.length === 2) {
+      // Pinch start
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastTouchDist = Math.hypot(dx, dy);
+      lastTouchCenter = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+      return;
+    }
+
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const pos = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    touchStartPos = pos;
+    touchStartTime = Date.now();
+
+    // Two-finger pan
+    if (e.touches.length === 1) {
+      isPanning = true;
+      panStart = pos;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", (e) => {
+    if (!pageImage) return;
+    e.preventDefault();
+
+    if (e.touches.length === 2 && lastTouchDist > 0) {
+      // Pinch zoom
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const center = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+      const rect = canvas.getBoundingClientRect();
+      const cx = center.x - rect.left;
+      const cy = center.y - rect.top;
+
+      const factor = dist / lastTouchDist;
+      const imgBefore = canvasToImage(cx, cy);
+      zoom = Math.max(0.1, Math.min(30, zoom * factor));
+      panX = cx - imgBefore.x * fitScale * zoom;
+      panY = cy - imgBefore.y * fitScale * zoom;
+
+      lastTouchDist = dist;
+      lastTouchCenter = center;
+      if (zoomInfo) zoomInfo.textContent = `${Math.round(zoom * 100)}%`;
+      draw();
+      return;
+    }
+
+    if (e.touches.length === 1 && isPanning) {
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const pos = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+      panX += pos.x - panStart.x;
+      panY += pos.y - panStart.y;
+      panStart = pos;
+      draw();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", (e) => {
+    if (!pageImage) return;
+    e.preventDefault();
+
+    if (e.touches.length === 0) {
+      // Check if it was a tap (short duration, small movement)
+      if (touchStartPos && touchStartTime) {
+        const elapsed = Date.now() - touchStartTime;
+        if (elapsed < 300) {
+          // Treat as a click
+          const pos = touchStartPos;
+          const imgPos = canvasToImage(pos.x, pos.y);
+
+          if (imgPos.x >= 0 && imgPos.y >= 0 && imgPos.x <= pageImage.width && imgPos.y <= pageImage.height) {
+            mouseImg = imgPos;
+
+            if (mode === "distance" || mode === "calibrate") {
+              if (!distPoint1) {
+                distPoint1 = imgPos;
+              } else {
+                if (mode === "distance") completeMeasureDistance(distPoint1, imgPos);
+                else completeCalibrate(distPoint1, imgPos);
+                distPoint1 = null;
+              }
+            } else if (mode === "count") {
+              completeMeasureCount(imgPos);
+            } else {
+              // polyline or area
+              polyPoints.push(imgPos);
+            }
+            draw();
+          }
+        }
+      }
+      isPanning = false;
+      lastTouchDist = 0;
+      lastTouchCenter = null;
+      touchStartPos = null;
+    }
+  }, { passive: false });
+
   // ── Button Handlers ────────────────────────────────────────────
 
   if (btnImport) btnImport.addEventListener("click", () => pdfInput.click());
@@ -1106,12 +1223,4 @@
       ? setStatus("Backend connected ✓", true)
       : setStatus("Backend offline — start server", false))
     .catch(() => setStatus("Server is waking up — please wait…", false));
-
-  // ── Landing page scroll effect ─────────────────────────────────
-  const header = document.getElementById("mainHeader");
-  if (header) {
-    window.addEventListener("scroll", () => {
-      header.classList.toggle("scrolled", window.scrollY > 50);
-    });
-  }
 })();

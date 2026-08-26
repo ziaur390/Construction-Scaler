@@ -19,11 +19,15 @@
           <small>Precision Intelligence</small>
         </span>
       </a>
+
+      <button class="hamburger" id="menuToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
       
-      <nav class="nav">
+      <nav class="nav" id="mainNav">
         <a href="#solutions">Solutions</a>
         <a href="#intelligence">Intelligence</a>
-        <div style="display: flex; align-items: center; gap: 16px; margin-left: 12px; border-left: 1px solid var(--nav-border); padding-left: 24px;">
+        <div class="nav-actions" style="display: flex; align-items: center; gap: 16px; margin-left: 12px; border-left: 1px solid var(--nav-border); padding-left: 24px;">
           <a href="./workspace.html" class="button button-primary">Open Workspace</a>
           <div style="width: 38px; height: 38px; border-radius: 50%; background: #e2e8f0; border: 2px solid white; box-shadow: var(--nav-shadow); overflow: hidden;">
             <img src="https://ui-avatars.com/api/?name=User&background=0f172a&color=fff" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
@@ -87,7 +91,7 @@
           <p class="eyebrow">Industry Solutions</p>
           <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 3rem; line-height: 1.1; letter-spacing: -0.03em;">Built for precision-driven construction teams.</h2>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;">
+        <div class="solutions-grid">
           <article class="panel" style="padding: 40px;">
             <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; margin-bottom: 16px;">General Contractors</h3>
             <p style="color: var(--nav-muted); line-height: 1.6;">Maintain surgical accuracy across complex project blueprints and ensure every bid is backed by high-precision data.</p>
@@ -130,16 +134,25 @@
 
   <script>
     const header = document.getElementById('mainHeader');
+    const menuToggle = document.getElementById('menuToggle');
+    const mainNav = document.getElementById('mainNav');
 
     window.addEventListener('scroll', () => {
-      if (window.scrollY > 50) {
-        header.classList.add('scrolled');
-        header.style.padding = '12px 32px';
-      } else {
-        header.classList.remove('scrolled');
-        header.style.padding = '16px 32px';
-      }
+      header.classList.toggle('scrolled', window.scrollY > 50);
     });
+
+    if (menuToggle && mainNav) {
+      menuToggle.addEventListener('click', () => {
+        menuToggle.classList.toggle('open');
+        mainNav.classList.toggle('open');
+      });
+      mainNav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          menuToggle.classList.remove('open');
+          mainNav.classList.remove('open');
+        });
+      });
+    }
   </script>
 </body>
 </html>

@@ -19,10 +19,13 @@
         <small>Precision Intelligence</small>
       </span>
     </a>
-    <nav class="nav">
+    <button class="hamburger" id="menuToggle" aria-label="Toggle navigation">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="nav" id="mainNav">
       <a href="./index.html">Dashboard</a>
       <a href="./index.html#solutions">Solutions</a>
-      <div style="display:flex;align-items:center;gap:16px;margin-left:12px;border-left:1px solid var(--nav-border);padding-left:24px;">
+      <div class="nav-actions" style="display:flex;align-items:center;gap:16px;margin-left:12px;border-left:1px solid var(--nav-border);padding-left:24px;">
         <span id="userGreeting" style="font-size:0.85rem;font-weight:600;color:var(--nav-ink);"></span>
         <button id="btnLogout" class="button button-secondary" style="padding:6px 12px;font-size:0.8rem;">Log Out</button>
       </div>
@@ -132,6 +135,24 @@
     </section>
   </main>
 
+  <script>
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const mainNav = document.getElementById('mainNav');
+      if (menuToggle && mainNav) {
+        menuToggle.addEventListener('click', () => {
+          menuToggle.classList.toggle('open');
+          mainNav.classList.toggle('open');
+        });
+        mainNav.querySelectorAll('a').forEach(link => {
+          link.addEventListener('click', () => {
+            menuToggle.classList.remove('open');
+            mainNav.classList.remove('open');
+          });
+        });
+      }
+    })();
+  </script>
   <script src="./assets/app.js"></script>
 </body>
 </html>
