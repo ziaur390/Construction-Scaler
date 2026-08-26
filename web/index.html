@@ -47,7 +47,7 @@
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="./workspace.html">Launch Workspace</a>
-            <div style="display: flex; align-items: center; gap: 12px; margin-left: 16px; cursor: pointer;">
+            <div id="watchDemoBtn" style="display: flex; align-items: center; gap: 12px; margin-left: 16px; cursor: pointer;">
               <div style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--nav-border); display: grid; place-items: center;" class="play-button-outer">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               </div>
@@ -132,6 +132,31 @@
     </footer>
   </div>
 
+  <!-- Demo Modal -->
+  <div class="demo-overlay" id="demoOverlay">
+    <div class="demo-modal">
+      <div class="demo-header">
+        <h3>Construction Scaler - How It Works</h3>
+        <button class="demo-close" id="demoClose">&times;</button>
+      </div>
+      <div class="demo-body">
+        <canvas class="demo-canvas" id="demoCanvas"></canvas>
+      </div>
+      <div class="demo-footer">
+        <div class="demo-steps">
+          <div class="demo-step-dot active" data-step="0"></div>
+          <div class="demo-step-dot" data-step="1"></div>
+          <div class="demo-step-dot" data-step="2"></div>
+        </div>
+        <span class="demo-step-label" id="demoStepLabel">Step 1: Upload Blueprint</span>
+        <div class="demo-nav">
+          <button class="button button-secondary" id="demoPrev">Back</button>
+          <button class="button button-primary" id="demoNext">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const header = document.getElementById('mainHeader');
     const menuToggle = document.getElementById('menuToggle');
@@ -153,6 +178,458 @@
         });
       });
     }
+
+    // ── Demo Animation ──────────────────────────────────────
+    (function() {
+      const overlay = document.getElementById('demoOverlay');
+      const demoCanvas = document.getElementById('demoCanvas');
+      const ctx = demoCanvas.getContext('2d');
+      const closeBtn = document.getElementById('demoClose');
+      const prevBtn = document.getElementById('demoPrev');
+      const nextBtn = document.getElementById('demoNext');
+      const stepLabel = document.getElementById('demoStepLabel');
+      const dots = document.querySelectorAll('.demo-step-dot');
+      const watchBtn = document.getElementById('watchDemoBtn');
+
+      const steps = [
+        "Step 1: Upload Blueprint",
+        "Step 2: Auto-Detect Scale",
+        "Step 3: Measure with Precision"
+      ];
+
+      let currentStep = 0;
+      let animFrame = null;
+      let stepStartTime = 0;
+      let isPlaying = false;
+
+      const STEP_DURATION = 3500;
+
+      function resizeDemoCanvas() {
+        const body = demoCanvas.parentElement;
+        const dpr = window.devicePixelRatio || 1;
+        demoCanvas.width = body.clientWidth * dpr;
+        demoCanvas.height = body.clientHeight * dpr;
+        ctx.scale(dpr, dpr);
+        demoCanvas.style.width = body.clientWidth + 'px';
+        demoCanvas.style.height = body.clientHeight + 'px';
+      }
+
+      function drawGrid(w, h) {
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.08)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < w; x += 30) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+        for (let y = 0; y < h; y += 30) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
+      }
+
+      function drawBlueprintOutline(w, h, alpha) {
+        const cx = w / 2, cy = h / 2;
+        const bw = w * 0.55, bh = h * 0.6;
+        const x = cx - bw / 2, y = cy - bh / 2;
+
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, bw, bh);
+
+        // inner rooms
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x + bw * 0.02, y + bh * 0.02, bw * 0.45, bh * 0.46);
+        ctx.strokeRect(x + bw * 0.5, y + bh * 0.02, bw * 0.48, bh * 0.46);
+        ctx.strokeRect(x + bw * 0.02, y + bh * 0.52, bw * 0.96, bh * 0.46);
+
+        // door arcs
+        ctx.beginPath();
+        ctx.arc(x + bw * 0.47, y + bh * 0.35, bw * 0.08, 0, Math.PI * 0.5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x + bw * 0.5, y + bh * 0.35, bw * 0.06, Math.PI * 0.5, Math.PI);
+        ctx.stroke();
+
+        // dimension lines
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, y - 20); ctx.lineTo(x + bw, y - 20); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x - 20, y); ctx.lineTo(x - 20, y + bh); ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.globalAlpha = 1;
+        return { x, y, bw, bh };
+      }
+
+      function easeInOut(t) {
+        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      }
+
+      // Step 0: Upload animation
+      function drawStep0(w, h, t) {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+        drawGrid(w, h);
+
+        const cx = w / 2, cy = h / 2;
+        const alpha = easeInOut(Math.min(1, t * 2));
+
+        // file icon
+        ctx.globalAlpha = alpha;
+        const iconW = 120, iconH = 150;
+        const ix = cx - iconW / 2, iy = cy - iconH / 2 - 30;
+
+        // file shadow
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.08)';
+        ctx.beginPath();
+        ctx.roundRect(ix + 4, iy + 4, iconW, iconH, 12);
+        ctx.fill();
+
+        // file body
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(ix, iy, iconW, iconH, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        // fold corner
+        ctx.fillStyle = '#eff6ff';
+        ctx.beginPath();
+        ctx.moveTo(ix + iconW - 24, iy);
+        ctx.lineTo(ix + iconW, iy + 24);
+        ctx.lineTo(ix + iconW - 24, iy + 24);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#3b82f6';
+        ctx.stroke();
+
+        // "PDF" text
+        ctx.fillStyle = '#3b82f6';
+        ctx.font = 'bold 18px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('PDF', ix + iconW / 2, iy + iconH / 2 - 10);
+
+        // lines on file
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+          const ly = iy + iconH / 2 + 16 + i * 14;
+          const lw = 50 - i * 10;
+          ctx.beginPath();
+          ctx.moveTo(cx - lw / 2, ly);
+          ctx.lineTo(cx + lw / 2, ly);
+          ctx.stroke();
+        }
+
+        // upload arrow
+        if (t > 0.3) {
+          const arrowT = easeInOut(Math.min(1, (t - 0.3) / 0.4));
+          const arrowY = iy - 30 + (1 - arrowT) * 40;
+          ctx.globalAlpha = arrowT;
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(cx, arrowY + 20);
+          ctx.lineTo(cx, arrowY - 10);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx - 10, arrowY);
+          ctx.lineTo(cx, arrowY - 14);
+          ctx.lineTo(cx + 10, arrowY);
+          ctx.stroke();
+        }
+
+        // label
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 22px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Upload your construction blueprint', cx, cy + iconH / 2 + 40);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '16px "Source Sans 3", sans-serif';
+        ctx.fillText('PDF files supported with automatic processing', cx, cy + iconH / 2 + 68);
+
+        ctx.globalAlpha = 1;
+      }
+
+      // Step 1: Scale detection
+      function drawStep1(w, h, t) {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+        drawGrid(w, h);
+
+        const room = drawBlueprintOutline(w, h, easeInOut(Math.min(1, t * 3)));
+
+        // scanning beam
+        const scanT = (t * 1.5) % 1;
+        const beamY = room.y + room.bh * scanT;
+        const beamAlpha = scanT < 0.1 ? scanT / 0.1 : scanT > 0.9 ? (1 - scanT) / 0.1 : 1;
+
+        ctx.globalAlpha = beamAlpha * 0.8;
+        ctx.fillStyle = '#3b82f6';
+        ctx.fillRect(room.x - 10, beamY - 2, room.bw + 20, 4);
+        ctx.shadowColor = '#3b82f6';
+        ctx.shadowBlur = 20;
+        ctx.fillRect(room.x - 10, beamY - 2, room.bw + 20, 4);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+
+        // scale detection badges
+        if (t > 0.4) {
+          const badgeAlpha = easeInOut(Math.min(1, (t - 0.4) / 0.3));
+          ctx.globalAlpha = badgeAlpha;
+
+          const badges = [
+            { x: room.x + room.bw + 16, y: room.y + 20, text: '1/4" = 1\'0"' },
+            { x: room.x + room.bw + 16, y: room.y + 56, text: 'Scale: 1:48' },
+            { x: room.x + room.bw + 16, y: room.y + 92, text: 'DPI: 150' }
+          ];
+
+          badges.forEach(b => {
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.roundRect(b.x, b.y, 130, 28, 6);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#065f46';
+            ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(b.text, b.x + 10, b.y + 14);
+          });
+
+          ctx.globalAlpha = 1;
+        }
+
+        // center label
+        const labelAlpha = easeInOut(Math.min(1, Math.max(0, (t - 0.5) / 0.3)));
+        ctx.globalAlpha = labelAlpha;
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 22px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Automatic scale detection from blueprint text', w / 2, h - 50);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '16px "Source Sans 3", sans-serif';
+        ctx.fillText('No manual input needed — OCR reads the scale notation', w / 2, h - 22);
+        ctx.globalAlpha = 1;
+      }
+
+      // Step 2: Measurement
+      function drawStep2(w, h, t) {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+        drawGrid(w, h);
+
+        const room = drawBlueprintOutline(w, h, 1);
+
+        const measureT = easeInOut(Math.min(1, t * 1.8));
+
+        // Line measurement
+        if (measureT > 0) {
+          const lt = Math.min(1, measureT / 0.5);
+          const x1 = room.x + room.bw * 0.02;
+          const y1 = room.y + room.bh * 0.25;
+          const x2 = x1 + room.bw * 0.45 * lt;
+          const y2 = y1;
+
+          ctx.strokeStyle = '#3b82f6';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+          // end points
+          [{ x: x1, y: y1 }, { x: x2, y: y2 }].forEach(p => {
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5; ctx.stroke();
+          });
+
+          if (lt >= 1) {
+            const mx = (x1 + x2) / 2, my = y1 - 14;
+            ctx.fillStyle = 'rgba(255,255,255,0.92)';
+            ctx.beginPath(); ctx.roundRect(mx - 40, my - 12, 80, 24, 4); ctx.fill();
+            ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.roundRect(mx - 40, my - 12, 80, 24, 4); ctx.stroke();
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 12px "Space Grotesk", sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('14.50 ft', mx, my);
+          }
+        }
+
+        // Area measurement
+        if (measureT > 0.4) {
+          const at = easeInOut(Math.min(1, (measureT - 0.4) / 0.4));
+          const ax = room.x + room.bw * 0.5;
+          const ay = room.y + room.bh * 0.02;
+          const aw = room.bw * 0.48;
+          const ah = room.bh * 0.46;
+
+          const pts = [
+            { x: ax, y: ay },
+            { x: ax + aw * at, y: ay },
+            { x: ax + aw * at, y: ay + ah * at },
+            { x: ax, y: ay + ah * at }
+          ];
+
+          ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
+          ctx.strokeStyle = '#8b5cf6';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          pts.forEach(p => ctx.lineTo(p.x, p.y));
+          ctx.closePath();
+          ctx.fill(); ctx.stroke();
+
+          pts.forEach(p => {
+            ctx.fillStyle = '#8b5cf6';
+            ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'white'; ctx.lineWidth = 1.5; ctx.stroke();
+          });
+
+          if (at >= 1) {
+            const cx = ax + aw / 2, cy = ay + ah / 2;
+            ctx.fillStyle = 'rgba(255,255,255,0.92)';
+            ctx.beginPath(); ctx.roundRect(cx - 44, cy - 12, 88, 24, 4); ctx.fill();
+            ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.roundRect(cx - 44, cy - 12, 88, 24, 4); ctx.stroke();
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 12px "Space Grotesk", sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('312.50 ft\u00B2', cx, cy);
+          }
+        }
+
+        // Count marker
+        if (measureT > 0.7) {
+          const ct = easeInOut(Math.min(1, (measureT - 0.7) / 0.3));
+          const cpx = room.x + room.bw * 0.25;
+          const cpy = room.y + room.bh * 0.75;
+
+          ctx.globalAlpha = ct;
+          ctx.fillStyle = '#eab308';
+          ctx.beginPath(); ctx.arc(cpx, cpy, 8, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.beginPath(); ctx.roundRect(cpx + 12, cpy - 10, 20, 20, 4); ctx.fill();
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 11px "Space Grotesk", sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('1', cpx + 22, cpy);
+          ctx.globalAlpha = 1;
+        }
+
+        // bottom labels
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 22px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Distance, area, and count measurements', w / 2, h - 50);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '16px "Source Sans 3", sans-serif';
+        ctx.fillText('Results auto-calculate using detected scale', w / 2, h - 22);
+      }
+
+      const drawFns = [drawStep0, drawStep1, drawStep2];
+
+      function animate(timestamp) {
+        if (!isPlaying) return;
+        if (!stepStartTime) stepStartTime = timestamp;
+
+        const elapsed = timestamp - stepStartTime;
+        const t = Math.min(1, elapsed / STEP_DURATION);
+        const w = demoCanvas.width / (window.devicePixelRatio || 1);
+        const h = demoCanvas.height / (window.devicePixelRatio || 1);
+
+        drawFns[currentStep](w, h, t);
+
+        if (t >= 1 && currentStep < 2) {
+          // auto-advance
+          currentStep++;
+          stepStartTime = timestamp;
+          updateDots();
+          updateLabel();
+        }
+
+        if (t < 1 || currentStep < 2) {
+          animFrame = requestAnimationFrame(animate);
+        } else {
+          isPlaying = false;
+          nextBtn.textContent = 'Replay';
+        }
+      }
+
+      function startAnimation() {
+        isPlaying = true;
+        stepStartTime = 0;
+        if (animFrame) cancelAnimationFrame(animFrame);
+        animFrame = requestAnimationFrame(animate);
+      }
+
+      function updateDots() {
+        dots.forEach((d, i) => {
+          d.classList.remove('active', 'done');
+          if (i < currentStep) d.classList.add('done');
+          else if (i === currentStep) d.classList.add('active');
+        });
+      }
+
+      function updateLabel() {
+        stepLabel.textContent = steps[currentStep];
+        prevBtn.style.visibility = currentStep === 0 ? 'hidden' : 'visible';
+        nextBtn.textContent = currentStep === 2 ? 'Replay' : 'Next';
+      }
+
+      function goToStep(s) {
+        currentStep = s;
+        stepStartTime = 0;
+        updateDots();
+        updateLabel();
+        startAnimation();
+      }
+
+      function openDemo() {
+        overlay.style.display = 'flex';
+        requestAnimationFrame(() => {
+          overlay.classList.add('visible');
+          resizeDemoCanvas();
+          goToStep(0);
+        });
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeDemo() {
+        overlay.classList.remove('visible');
+        isPlaying = false;
+        if (animFrame) cancelAnimationFrame(animFrame);
+        setTimeout(() => { overlay.style.display = 'none'; }, 300);
+        document.body.style.overflow = '';
+      }
+
+      watchBtn.addEventListener('click', openDemo);
+      closeBtn.addEventListener('click', closeDemo);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDemo(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDemo(); });
+
+      prevBtn.addEventListener('click', () => {
+        if (currentStep > 0) goToStep(currentStep - 1);
+      });
+
+      nextBtn.addEventListener('click', () => {
+        if (currentStep < 2) goToStep(currentStep + 1);
+        else goToStep(0);
+      });
+
+      window.addEventListener('resize', () => {
+        if (overlay.classList.contains('visible')) resizeDemoCanvas();
+      });
+    })();
   </script>
 </body>
 </html>

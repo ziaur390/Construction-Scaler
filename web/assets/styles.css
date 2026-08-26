@@ -859,6 +859,135 @@ a {
   justify-content: space-between;
 }
 
+/* ── Demo Modal ────────────────────────────────────────────── */
+.demo-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.demo-overlay.visible {
+  display: flex;
+  opacity: 1;
+}
+.demo-modal {
+  background: white;
+  border-radius: 20px;
+  width: 90vw;
+  max-width: 860px;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(20px) scale(0.97);
+  transition: transform 400ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.demo-overlay.visible .demo-modal {
+  transform: translateY(0) scale(1);
+}
+.demo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--nav-border);
+  background: var(--nav-paper);
+}
+.demo-header h3 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+.demo-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--nav-border);
+  background: white;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: grid;
+  place-items: center;
+  transition: all 150ms ease;
+  color: var(--nav-muted);
+}
+.demo-close:hover {
+  background: var(--nav-ink);
+  color: white;
+  border-color: var(--nav-ink);
+}
+.demo-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+.demo-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.demo-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  border-top: 1px solid var(--nav-border);
+  background: white;
+}
+.demo-steps {
+  display: flex;
+  gap: 8px;
+}
+.demo-step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--nav-border);
+  transition: all 300ms ease;
+}
+.demo-step-dot.active {
+  background: var(--nav-accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+.demo-step-dot.done {
+  background: var(--nav-success);
+}
+.demo-step-label {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--nav-ink);
+  min-width: 200px;
+}
+.demo-nav {
+  display: flex;
+  gap: 8px;
+}
+.demo-nav .button {
+  padding: 8px 20px;
+  font-size: 0.85rem;
+}
+@media (max-width: 600px) {
+  .demo-modal {
+    width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .demo-step-label {
+    font-size: 0.8rem;
+    min-width: 120px;
+  }
+}
+
 /* ── Focus Styles (Accessibility) ───────────────────────────── */
 button:focus-visible,
 a:focus-visible,
