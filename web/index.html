@@ -204,14 +204,13 @@
 
       const STEP_DURATION = 3500;
 
+      const W = 1280, H = 720;
+
       function resizeDemoCanvas() {
-        const body = demoCanvas.parentElement;
         const dpr = window.devicePixelRatio || 1;
-        demoCanvas.width = body.clientWidth * dpr;
-        demoCanvas.height = body.clientHeight * dpr;
+        demoCanvas.width = W * dpr;
+        demoCanvas.height = H * dpr;
         ctx.scale(dpr, dpr);
-        demoCanvas.style.width = body.clientWidth + 'px';
-        demoCanvas.style.height = body.clientHeight + 'px';
       }
 
       function drawGrid(w, h) {
@@ -544,10 +543,8 @@
 
         const elapsed = timestamp - stepStartTime;
         const t = Math.min(1, elapsed / STEP_DURATION);
-        const w = demoCanvas.width / (window.devicePixelRatio || 1);
-        const h = demoCanvas.height / (window.devicePixelRatio || 1);
 
-        drawFns[currentStep](w, h, t);
+        drawFns[currentStep](W, H, t);
 
         if (t >= 1 && currentStep < 2) {
           // auto-advance
@@ -626,9 +623,6 @@
         else goToStep(0);
       });
 
-      window.addEventListener('resize', () => {
-        if (overlay.classList.contains('visible')) resizeDemoCanvas();
-      });
     })();
   </script>
 </body>

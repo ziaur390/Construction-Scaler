@@ -880,8 +880,8 @@ a {
   background: white;
   border-radius: 20px;
   width: 90vw;
-  max-width: 860px;
-  max-height: 85vh;
+  max-width: 1280px;
+  max-height: 90vh;
   overflow: hidden;
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.4);
   display: flex;
@@ -896,9 +896,10 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 28px;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--nav-border);
   background: var(--nav-paper);
+  flex-shrink: 0;
 }
 .demo-header h3 {
   margin: 0;
@@ -918,6 +919,7 @@ a {
   place-items: center;
   transition: all 150ms ease;
   color: var(--nav-muted);
+  flex-shrink: 0;
 }
 .demo-close:hover {
   background: var(--nav-ink);
@@ -925,13 +927,17 @@ a {
   border-color: var(--nav-ink);
 }
 .demo-body {
-  flex: 1;
   position: relative;
   overflow: hidden;
   background: #f1f5f9;
+  width: 100%;
+  aspect-ratio: 1280 / 720;
+  max-height: calc(90vh - 120px);
 }
 .demo-canvas {
   display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
 }
@@ -939,9 +945,10 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 28px;
+  padding: 14px 24px;
   border-top: 1px solid var(--nav-border);
   background: white;
+  flex-shrink: 0;
 }
 .demo-steps {
   display: flex;
@@ -982,9 +989,22 @@ a {
     max-height: 100vh;
     border-radius: 0;
   }
+  .demo-body {
+    aspect-ratio: auto;
+    height: 56.25vw;
+    max-height: calc(100vh - 110px);
+  }
   .demo-step-label {
     font-size: 0.8rem;
     min-width: 120px;
+  }
+  .demo-header {
+    padding: 12px 16px;
+  }
+  .demo-footer {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 }
 
